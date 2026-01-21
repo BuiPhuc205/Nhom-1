@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Hệ thống quản lý sinh viên</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: linear-gradient(135deg, #e0e7ff, #f8fafc);
+      padding: 40px;
+    }
+
+    h1, h2, h3 {
+      text-align: center;
+      color: #1e3a8a;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      animation: fadeIn 0.4s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    input {
+      padding: 10px;
+      margin: 8px 0;
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid #c7d2fe;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 2px rgba(99,102,241,0.2);
+    }
+
+    button {
+      padding: 10px;
+      margin-top: 10px;
+      width: 100%;
+      background: #4f46e5;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background: #4338ca;
+      transform: translateY(-1px);
+    }
+
+    .logout {
+      background: #dc2626;
+      max-width: 200px;
+      margin: 0 auto 20px;
+      display: block;
+    }
+
+    .hidden { display: none; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 25px;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    table th {
+      background: #e0e7ff;
+      color: #1e3a8a;
+      padding: 12px;
+    }
+
+    table td {
+      padding: 12px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    table tr:hover {
+      background: #f1f5f9;
+    }
+
+    table button {
+      width: auto;
+      padding: 6px 12px;
+      margin: 2px;
+      font-size: 14px;
+    }
+
+    a {
+      color: #4f46e5;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<!-- REGISTER -->
+<div class="container" id="registerBox">
+  <h2>Đăng ký</h2>
+  <input type="text" id="regUser" placeholder="Tên đăng nhập">
+  <input type="password" id="regPass" placeholder="Mật khẩu">
+  <button onclick="register()">Đăng ký</button>
+  <p>Đã có tài khoản? <a href="#" onclick="showLogin()">Đăng nhập</a></p>
+</div>
+
+<!-- LOGIN -->
+<div class="container hidden" id="loginBox">
+  <h2>Đăng nhập</h2>
+  <input type="text" id="loginUser" placeholder="Tên đăng nhập">
+  <input type="password" id="loginPass" placeholder="Mật khẩu">
+  <button onclick="login()">Đăng nhập</button>
+  <p>Chưa có tài khoản? <a href="#" onclick="showRegister()">Đăng ký</a></p>
+</div>
+
+<!-- DASHBOARD -->
+<div class="container hidden" id="dashboard">
+  <h1>Tổng quan hệ thống</h1>
+  <p id="welcome"></p>
+  <button class="logout" onclick="logout()">Đăng xuất</button>
+
+  <h3 id="totalStudents"></h3>
+
+  <hr>
+
+  <h2>Quản lý sinh viên</h2>
+  <input type="hidden" id="index">
+  <input type="text" id="msv" placeholder="Mã sinh viên">
+  <input type="text" id="hoten" placeholder="Họ tên">
+  <input type="number" id="gpa" step="0.1" placeholder="GPA (0 - 4)">
+  <button onclick="saveStudent()">Lưu sinh viên</button>
+
+  <h3>Tìm kiếm sinh viên</h3>
+  <input type="text" id="search" placeholder="Nhập mã hoặc tên" onkeyup="render()">
+
+  <table>
+    <thead>
+      <tr>
+        <th>MSV</th>
+        <th>Họ tên</th>
+        <th>GPA</th>
+        <th>Xếp loại</th>
+        <th>Hành động</th>
+      </tr>
+    </thead>
+    <tbody id="studentTable"></tbody>
+  </table>
+</div>
+
+<script>
+  // ===== USER =====
+  let users = JSON.parse(localStorage.getItem('users')) || [];
+  let currentUser = JSON.parse(localStorage.getItem('currentUser'));
+
+  function showLogin() {
+    registerBox.classList.add('hidden');
+    loginBox.classList.remove('hidden');
+  }
+
+  function showRegister() {
+    loginBox.classList.add('hidden');
+    registerBox.classList.remove('hidden');
+  }
+
+  function register() {
+    const u = regUser.value.trim();
+    const p = regPass.value.trim();
+    if (!u || !p) return alert('Vui lòng nhập đủ thông tin');
+    if (users.some(x => x.username === u)) return alert('Tài khoản đã tồn tại');
+    users.push({ username: u, password: p });
+    localStorage.setItem('users', JSON.stringify(users));
+    alert('Đăng ký thành công, vui lòng đăng nhập');
+    showLogin();
+  }
+
+  function login() {
+    const u = loginUser.value.trim();
+    const p = loginPass.value.trim();
+    const user = users.find(x => x.username === u && x.password === p);
+    if (!user) return alert('Sai tài khoản hoặc mật khẩu');
+    currentUser = user;
+    localStorage.setItem('currentUser', JSON.stringify(user));
+    showDashboard();
+  }
+
+  function logout() {
+    localStorage.removeItem('currentUser');
+    location.reload();
+  }
+
+  function showDashboard() {
+    registerBox.classList.add('hidden');
+    loginBox.classList.add('hidden');
+    dashboard.classList.remove('hidden');
+    welcome.innerText = 'Xin chào, ' + currentUser.username;
+    render();
+  }
+
+  if (currentUser) showDashboard();
+
+  // ===== STUDENT =====
+  let students = JSON.parse(localStorage.getItem('students')) || [];
+
+  function getRank(gpa) {
+    if (gpa >= 3.6) return 'Xuất sắc';
+    if (gpa >= 3.2) return 'Giỏi';
+    if (gpa >= 2.5) return 'Khá';
+    if (gpa >= 2.0) return 'Trung bình';
+    return 'Yếu';
+  }
+
+  function render() {
+    const table = studentTable;
+    const key = search.value.toLowerCase();
+    table.innerHTML = '';
+
+    students
+      .filter(sv => sv.msv.toLowerCase().includes(key) || sv.hoten.toLowerCase().includes(key))
+      .forEach((sv, i) => {
+        table.innerHTML += `
+          <tr>
+            <td>${sv.msv}</td>
+            <td>${sv.hoten}</td>
+            <td>${sv.gpa}</td>
+            <td>${getRank(sv.gpa)}</td>
+            <td>
+              <button onclick="editStudent(${i})">Sửa</button>
+              <button style="background:#dc2626" onclick="deleteStudent(${i})">Xóa</button>
+            </td>
+          </tr>`;
+      });
+
+    totalStudents.innerText = 'Tổng số sinh viên: ' + students.length;
+    localStorage.setItem('students', JSON.stringify(students));
+  }
+
+  function saveStudent() {
+    const sv = { msv: msv.value.trim(), hoten: hoten.value.trim(), gpa: parseFloat(gpa.value) };
+    if (!sv.msv || !sv.hoten || isNaN(sv.gpa)) return alert('Thiếu thông tin');
+    if (sv.gpa < 0 || sv.gpa > 4) return alert('GPA không hợp lệ');
+
+    if (index.value === '') students.push(sv);
+    else students[index.value] = sv;
+
+    clearForm();
+    render();
+  }
+
+  function editStudent(i) {
+    const sv = students[i];
+    msv.value = sv.msv; hoten.value = sv.hoten; gpa.value = sv.gpa; index.value = i;
+  }
+
+  function deleteStudent(i) {
+    if (confirm('Xóa sinh viên này?')) {
+      students.splice(i, 1);
+      render();
+    }
+  }
+
+  function clearForm() {
+    msv.value = hoten.value = gpa.value = index.value = '';
+  }
+</script>
+</body>
+</html>
